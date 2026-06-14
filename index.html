@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OurChat P2P</title>
+    <title>trash</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Phosphor Icons -->
@@ -12,11 +12,12 @@
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
     <style>
-        /* Custom scrollbar and animations */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; }
-        .glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+        /* Premium UI animations and scrollbar tweaks */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; }
+        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(0,0,0,0.06); }
         .ring-anim { animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
         @keyframes pulse-ring { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(34, 197, 94, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
         .typing-dot { animation: typing 1.4s infinite ease-in-out both; }
@@ -27,13 +28,13 @@
 </head>
 <body class="h-screen w-full overflow-hidden flex justify-center bg-slate-100 text-slate-800">
 
-    <!-- Config (REPLACE THIS URL) -->
+    <!-- Config (REPLACE WITH YOUR LIVE DEPLOYMENT URL) -->
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx066mA2jLGV2SQ2MpRnQyuihfefo-qshwQIMmUhfnQpxruPAuipHZk2PYWx5DegAFvug/exec"; 
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwuEnrGcpPDFR9vuZgkluvrJnzBSOB0gjTo9ZguNMm8wPXVBmBBbc_AhDSKVuYpbJVugA/exec"; 
     </script>
 
     <!-- App Container -->
-    <div class="w-full max-w-md h-full bg-white relative flex flex-col shadow-2xl">
+    <div class="w-full max-w-md h-full bg-white relative flex flex-col shadow-2xl overflow-hidden">
 
         <!-- SETUP SCREEN -->
         <div id="setup-screen" class="absolute inset-0 z-50 bg-white flex flex-col items-center justify-center p-6 transition-opacity duration-300">
@@ -46,30 +47,37 @@
             <input type="file" id="pfp-input" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
             
             <h1 class="text-2xl font-bold mb-2">Set Up Profile</h1>
-            <p class="text-slate-500 text-sm mb-8 text-center">Your image will be compressed automatically to fit in the database.</p>
+            <p class="text-slate-500 text-sm mb-8 text-center px-4">Create a custom avatar and name. Your image is auto-compressed for cloud performance.</p>
             
             <input type="text" id="username-input" placeholder="Enter your name" class="w-full bg-slate-100 px-5 py-4 rounded-xl mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium">
-            <button onclick="saveProfile()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-700 transition active:scale-95">Enter Chat</button>
+            <button onclick="saveProfile()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-700 transition active:scale-95">Enter Group Chat</button>
         </div>
 
         <!-- MAIN CHAT SCREEN -->
-        <div id="chat-screen" class="flex flex-col h-full hidden">
+        <div id="chat-screen" class="flex flex-col h-full hidden relative">
+            
             <!-- Header -->
             <header class="glass z-10 px-4 py-3 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <img id="friend-pfp" src="https://api.dicebear.com/7.x/avataaars/svg?seed=friend" class="w-10 h-10 rounded-full border border-slate-200 object-cover">
+                    <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg">
+                        <i class="ph ph-users-three"></i>
+                    </div>
                     <div>
-                        <h2 id="friend-name" class="font-bold text-lg leading-tight">Waiting for friend...</h2>
-                        <div class="flex items-center gap-1 text-xs text-green-500 font-medium hidden" id="typing-indicator">
-                            <span>typing</span>
-                            <div class="flex gap-0.5"><div class="w-1 h-1 bg-green-500 rounded-full typing-dot"></div><div class="w-1 h-1 bg-green-500 rounded-full typing-dot"></div><div class="w-1 h-1 bg-green-500 rounded-full typing-dot"></div></div>
-                        </div>
+                        <h2 class="font-bold text-lg leading-tight">Group Space</h2>
+                        <span id="active-members-count" class="text-xs text-slate-400">Loading members...</span>
                     </div>
                 </div>
-                <button onclick="startCall()" class="w-10 h-10 rounded-full bg-slate-100 text-blue-600 flex items-center justify-center hover:bg-blue-50 transition active:scale-90">
-                    <i class="ph-fill ph-phone text-xl"></i>
+                <button onclick="toggleMembersList()" class="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200 transition active:scale-90 relative">
+                    <i class="ph ph-user-list text-xl"></i>
+                    <span id="online-dot-badge" class="absolute top-2 right-2 w-2.5 h-2.5 bg-green-500 rounded-full border border-white hidden"></span>
                 </button>
             </header>
+
+            <!-- Active Typing Bar -->
+            <div id="typing-indicator" class="bg-slate-50 border-b border-slate-100 px-4 py-1.5 flex items-center gap-2 text-xs text-green-600 font-medium hidden">
+                <span id="typing-text">Someone is typing</span>
+                <div class="flex gap-0.5"><div class="w-1 h-1 bg-green-600 rounded-full typing-dot"></div><div class="w-1 h-1 bg-green-600 rounded-full typing-dot"></div><div class="w-1 h-1 bg-green-600 rounded-full typing-dot"></div></div>
+            </div>
 
             <!-- Chat Area -->
             <main id="chat-box" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 flex flex-col">
@@ -79,25 +87,41 @@
             <!-- Input Area -->
             <footer class="p-3 bg-white border-t border-slate-100 pb-safe">
                 <div class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-full">
-                    <input type="text" id="message-input" placeholder="Message..." class="flex-1 bg-transparent px-4 py-2 outline-none" oninput="handleTyping()" onkeypress="if(event.key === 'Enter') sendMessage()">
+                    <input type="text" id="message-input" placeholder="Message group..." class="flex-1 bg-transparent px-4 py-2 outline-none text-sm" oninput="handleTyping()" onkeypress="if(event.key === 'Enter') sendMessage()">
                     <button onclick="sendMessage()" class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-sm hover:bg-blue-700 transition active:scale-90">
                         <i class="ph-fill ph-paper-plane-tilt text-lg"></i>
                     </button>
                 </div>
             </footer>
+
+            <!-- SLIDE-OUT MEMBERS LIST DRAWER -->
+            <div id="members-drawer" class="absolute inset-y-0 right-0 w-64 bg-white z-40 border-l border-slate-200 shadow-2xl flex flex-col transform translate-x-full transition-transform duration-300">
+                <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+                    <h3 class="font-bold text-md flex items-center gap-2">
+                        <i class="ph ph-circle-wavy-check text-green-500"></i> Members Online
+                    </h3>
+                    <button onclick="toggleMembersList()" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button>
+                </div>
+                <div id="members-list-container" class="flex-1 overflow-y-auto p-4 space-y-3">
+                    <!-- Dynamic Member list items go here -->
+                </div>
+            </div>
+            
+            <!-- Drawer Backdrop Overlay -->
+            <div id="drawer-backdrop" class="absolute inset-0 bg-black/20 z-30 hidden transition-opacity" onclick="toggleMembersList()"></div>
         </div>
 
         <!-- CALL OVERLAY -->
         <div id="call-overlay" class="absolute inset-0 z-[60] bg-slate-900 text-white flex flex-col items-center justify-between py-20 hidden">
-            <!-- Hidden video elements to process WebRTC streams -->
+            <!-- Hidden video/audio streams processed via WebRTC -->
             <video id="local-video" autoplay muted playsinline class="hidden"></video>
             <video id="remote-video" autoplay playsinline class="hidden"></video>
 
             <div class="flex flex-col items-center mt-10">
                 <div class="w-32 h-32 rounded-full overflow-hidden mb-6 ring-anim relative">
-                    <img id="call-pfp" src="https://api.dicebear.com/7.x/avataaars/svg?seed=friend" class="w-full h-full object-cover">
+                    <img id="call-pfp" src="https://api.dicebear.com/7.x/avataaars/svg?seed=placeholder" class="w-full h-full object-cover">
                 </div>
-                <h2 id="call-name" class="text-3xl font-bold mb-2">Friend Name</h2>
+                <h2 id="call-name" class="text-3xl font-bold mb-2">Friend</h2>
                 <p id="call-status" class="text-slate-400">Ringing...</p>
             </div>
 
@@ -114,10 +138,11 @@
     </div>
 
     <script>
-        // --- STATE VARIABLES ---
+        // --- GLOBAL STATE ---
         let myName = localStorage.getItem('chat_name') || '';
         let myPfp = localStorage.getItem('chat_pfp') || '';
         let peer = null;
+        let peerIdString = '';
         let localStream = null;
         let currentCall = null;
         let isTyping = false;
@@ -125,8 +150,12 @@
         let lastMessageCount = 0;
         let pollInterval;
         let activeCallSignal = null;
+        let isDrawerOpen = false;
+        
+        // Cache to store known profile pictures for user list and chat bubbles
+        let userDatabase = {};
 
-        // --- INITIALIZATION ---
+        // --- ON LOAD ---
         window.onload = () => {
             if (myName) {
                 document.getElementById('username-input').value = myName;
@@ -134,8 +163,7 @@
             }
         };
 
-        // --- IMAGE COMPRESSION ---
-        // Downscales image to ~100px and converts to low-quality JPEG to keep base64 string small for Google Sheets
+        // --- AUTOMATIC IMAGE COMPRESSION ---
         function handleImageUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -145,16 +173,15 @@
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
-                    canvas.width = 100; // Force tiny width
-                    canvas.height = 100; // Force tiny height
-                    // Crop center
+                    canvas.width = 100; // Small size for fast Sheets database operation
+                    canvas.height = 100;
+                    
                     const minSize = Math.min(img.width, img.height);
                     const sx = (img.width - minSize) / 2;
                     const sy = (img.height - minSize) / 2;
                     ctx.drawImage(img, sx, sy, minSize, minSize, 0, 0, 100, 100);
                     
-                    // Compress to JPEG format (0.6 quality)
-                    myPfp = canvas.toDataURL('image/jpeg', 0.6); 
+                    myPfp = canvas.toDataURL('image/jpeg', 0.5); // 50% compress
                     document.getElementById('pfp-preview').src = myPfp;
                 }
                 img.src = e.target.result;
@@ -162,12 +189,14 @@
             reader.readAsDataURL(file);
         }
 
-        // --- PROFILE SETUP ---
+        // --- ENTER SYSTEM ---
         async function saveProfile() {
             myName = document.getElementById('username-input').value.trim();
             if (!myName) return alert("Please enter a name");
             
-            // Generate default if no PFP
+            // Clean name for WebRTC / sheet parsing
+            myName = myName.replace(/[^a-zA-Z0-9 ]/g, '');
+
             if (!myPfp) {
                 myPfp = `https://api.dicebear.com/7.x/avataaars/svg?seed=${myName}`;
             }
@@ -181,261 +210,367 @@
                 document.getElementById('chat-screen').classList.remove('hidden');
             }, 300);
 
-            // Push profile to database
-            postToSheet({ action: 'updateUser', sender: myName, pfp: myPfp });
-            
             initPeer();
-            startPolling();
         }
 
-        // --- NETWORK FETCHING (POLLING) ---
+        // --- WEB RESPONSE DISPATCHER (CORS Safe) ---
+        async function postToSheet(payload) {
+            if(!SCRIPT_URL.startsWith('http')) return console.warn("Google Script URL is unconfigured.");
+            try {
+                // We use 'text/plain' as the Content-Type header. This is a critical hack 
+                // to skip standard browser CORS preflight blocks with Google Apps Script.
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                return await response.json();
+            } catch (err) {
+                console.error("Transmission error:", err);
+                return null;
+            }
+        }
+
+        // --- UNIFIED POLLING CYCLE ---
         function startPolling() {
-            pollData(); // initial fetch
-            // Poll every 3 seconds to keep it pseudo-realtime
-            pollInterval = setInterval(pollData, 3000); 
+            pollData();
+            pollInterval = setInterval(pollData, 3000); // Efficient 3s cycle
         }
 
         async function pollData() {
-            if(!SCRIPT_URL.startsWith('http')) return; // Ignore if URL not set
-            try {
-                const response = await fetch(SCRIPT_URL);
-                const data = await response.json();
-                
-                renderMessages(data.messages);
-                processState(data.state);
-            } catch (err) {
-                console.error("Polling error", err);
+            // Package active user stats and retrieve group state in one quick action!
+            const responseData = await postToSheet({
+                action: 'poll',
+                sender: myName,
+                pfp: myPfp,
+                peerId: peerIdString,
+                isTyping: isTyping
+            });
+
+            if (responseData) {
+                renderMessages(responseData.messages);
+                processGroupState(responseData.state);
             }
         }
 
-        async function postToSheet(payload) {
-            if(!SCRIPT_URL.startsWith('http')) return console.warn("Google Script URL missing");
-            try {
-                await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
-            } catch (err) {
-                console.error("Post error", err);
-            }
-        }
-
-        // --- RENDERING UI ---
+        // --- RENDER GROUP MESSAGES ---
         function renderMessages(messages) {
-            if (messages.length === lastMessageCount) return; // No new messages
+            if (messages.length === lastMessageCount) return;
             lastMessageCount = messages.length;
             
             const chatBox = document.getElementById('chat-box');
-            chatBox.innerHTML = ''; // Clear and rebuild
+            chatBox.innerHTML = ''; 
             
             messages.forEach(msg => {
                 const isMe = msg.sender === myName;
-                const timeStr = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const timeStr = new Date(Number(msg.timestamp)).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 
-                const div = document.createElement('div');
-                div.className = `flex w-full ${isMe ? 'justify-end' : 'justify-start'}`;
+                // Pull PFP from user state cache or use dynamic fallback
+                const senderPfp = userDatabase[msg.sender + "_pfp"] || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.sender}`;
                 
-                div.innerHTML = `
-                    <div class="max-w-[75%]">
-                        ${!isMe ? `<span class="text-[10px] text-slate-400 ml-1 mb-1 block">${msg.sender}</span>` : ''}
-                        <div class="px-4 py-2.5 rounded-2xl ${isMe ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-white border border-slate-200 text-slate-800 rounded-bl-sm'} shadow-sm">
-                            <p class="leading-relaxed text-[15px]">${msg.message}</p>
+                const messageRow = document.createElement('div');
+                messageRow.className = `flex w-full gap-2.5 items-end ${isMe ? 'justify-end' : 'justify-start'}`;
+                
+                messageRow.innerHTML = `
+                    ${!isMe ? `<img src="${senderPfp}" class="w-8 h-8 rounded-full border border-slate-200 object-cover shadow-sm mb-4">` : ''}
+                    <div class="max-w-[70%]">
+                        ${!isMe ? `<span class="text-[10px] font-semibold text-slate-500 ml-1 mb-1 block">${msg.sender}</span>` : ''}
+                        <div class="px-4 py-2.5 rounded-2xl ${isMe ? 'bg-blue-600 text-white rounded-br-sm shadow-md' : 'bg-white border border-slate-100 text-slate-800 rounded-bl-sm shadow-sm'}">
+                            <p class="leading-relaxed text-[14px] whitespace-pre-wrap break-all">${msg.message}</p>
                         </div>
-                        <span class="text-[10px] text-slate-400 mt-1 block ${isMe ? 'text-right mr-1' : 'ml-1'}">${timeStr}</span>
+                        <span class="text-[9px] text-slate-400 mt-1 block ${isMe ? 'text-right mr-1' : 'ml-1'}">${timeStr}</span>
                     </div>
                 `;
-                chatBox.appendChild(div);
+                chatBox.appendChild(messageRow);
             });
             chatBox.scrollTop = chatBox.scrollHeight;
         }
 
-        function processState(state) {
-            // Find friend (whoever is not me)
-            let friendName = "Friend";
-            let friendPfp = "https://api.dicebear.com/7.x/avataaars/svg?seed=friend";
-            let isFriendTyping = false;
+        // --- PROCESS ONLINE LIST, GROUP TYPING & VOICE CALL ALERTS ---
+        function processGroupState(state) {
+            const now = new Date().getTime();
+            const activeUsers = [];
+            const typingUsers = [];
+            
+            // Build temporary cache
+            userDatabase = state;
 
+            // Gather metadata of all users registered in the state sheet
             for (const key in state) {
-                if (key.endsWith("_pfp") && key !== `${myName}_pfp`) {
-                    friendName = key.replace("_pfp", "");
-                    friendPfp = state[key];
-                }
-                if (key === `${friendName}_typing` && state[key] === "true") {
-                    isFriendTyping = true;
+                if (key.endsWith("_lastSeen")) {
+                    const user = key.replace("_lastSeen", "");
+                    const lastSeenTime = Number(state[key]);
+                    const isOnline = (now - lastSeenTime) < 15000; // Online if polled within 15 seconds
+
+                    if (isOnline) {
+                        const userPfp = state[user + "_pfp"] || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user}`;
+                        const userPeerId = state[user + "_peerId"] || '';
+                        
+                        activeUsers.push({
+                            name: user,
+                            pfp: userPfp,
+                            peerId: userPeerId
+                        });
+
+                        // Check typing
+                        if (state[user + "_typing"] === "true" && user !== myName) {
+                            typingUsers.push(user);
+                        }
+                    }
                 }
             }
 
-            // Update UI with friend data
-            if(friendName !== "Friend") {
-                document.getElementById('friend-name').innerText = friendName;
-                document.getElementById('friend-pfp').src = friendPfp;
-                document.getElementById('call-name').innerText = friendName;
-                document.getElementById('call-pfp').src = friendPfp;
+            // Update Member list count header
+            document.getElementById('active-members-count').innerText = `${activeUsers.length} member${activeUsers.length === 1 ? '' : 's'} online`;
+            
+            if (activeUsers.length > 1) {
+                document.getElementById('online-dot-badge').classList.remove('hidden');
+            } else {
+                document.getElementById('online-dot-badge').classList.add('hidden');
             }
 
-            // Update typing indicator
-            const typeInd = document.getElementById('typing-indicator');
-            isFriendTyping ? typeInd.classList.remove('hidden') : typeInd.classList.add('hidden');
+            // Build Slideout Drawer
+            buildMemberDrawerUI(activeUsers);
 
-            // Process Call Signals
-            const callSignalRaw = state['active_call'];
+            // Update Typing Bar
+            const typingBar = document.getElementById('typing-indicator');
+            const typingText = document.getElementById('typing-text');
+            if (typingUsers.length > 0) {
+                typingBar.classList.remove('hidden');
+                if (typingUsers.length === 1) {
+                    typingText.innerText = `${typingUsers[0]} is typing`;
+                } else if (typingUsers.length === 2) {
+                    typingText.innerText = `${typingUsers[0]} & ${typingUsers[1]} are typing`;
+                } else {
+                    typingText.innerText = `Multiple people are typing`;
+                }
+            } else {
+                typingBar.classList.add('hidden');
+            }
+
+            // Poll for target calls directed *specifically* to me!
+            const myCallSignalKey = `call_to_${myName}`;
+            const callSignalRaw = state[myCallSignalKey];
+            
             if (callSignalRaw) {
                 const callData = JSON.parse(callSignalRaw);
-                const timeDiff = new Date().getTime() - callData.time;
+                const timeDiff = now - callData.time;
                 
-                // If there's a call signal, it's for me, and it's less than 60 seconds old
-                if (callData.caller !== myName && timeDiff < 60000) {
+                // Ring screen if call was made within 45s
+                if (timeDiff < 45000) {
                     if (!currentCall && !document.getElementById('call-overlay').classList.contains('active-ring')) {
-                        showIncomingCall(callData);
+                        triggerCallRinging(callData);
                     }
                 }
             } else {
-                // Call was cancelled or ended by the other person
+                // Cancel ring screen if active caller disconnected
                 if (document.getElementById('call-overlay').classList.contains('active-ring') && !currentCall) {
-                    hideCallScreen();
+                    endCallQuietly();
                 }
             }
         }
 
-        // --- MESSAGING ---
-        function sendMessage() {
+        // --- MEMBER LIST UI GENERATION ---
+        function buildMemberDrawerUI(users) {
+            const listContainer = document.getElementById('members-list-container');
+            listContainer.innerHTML = '';
+
+            users.forEach(user => {
+                const isCurrentMe = user.name === myName;
+                const memberCard = document.createElement('div');
+                memberCard.className = `flex items-center justify-between p-2 rounded-xl transition ${isCurrentMe ? 'bg-slate-50' : 'hover:bg-slate-50'}`;
+                
+                memberCard.innerHTML = `
+                    <div class="flex items-center gap-2.5">
+                        <div class="relative w-8 h-8">
+                            <img src="${user.pfp}" class="w-full h-full rounded-full object-cover border border-slate-100">
+                            <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></span>
+                        </div>
+                        <span class="text-sm font-semibold truncate max-w-[110px]">${user.name} ${isCurrentMe ? '(You)' : ''}</span>
+                    </div>
+                    ${!isCurrentMe && user.peerId ? `
+                        <button onclick="dialFriend('${user.name}', '${user.peerId}')" class="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 active:scale-90 transition">
+                            <i class="ph-fill ph-phone-call text-md"></i>
+                        </button>
+                    ` : ''}
+                `;
+                listContainer.appendChild(memberCard);
+            });
+
+            if (users.length <= 1) {
+                listContainer.innerHTML = `<div class="text-center text-xs text-slate-400 py-6">Nobody else online yet. Send your friend the link!</div>`;
+            }
+        }
+
+        function toggleMembersList() {
+            isDrawerOpen = !isDrawerOpen;
+            const drawer = document.getElementById('members-drawer');
+            const backdrop = document.getElementById('drawer-backdrop');
+            
+            if (isDrawerOpen) {
+                drawer.classList.remove('translate-x-full');
+                backdrop.classList.remove('hidden');
+            } else {
+                drawer.classList.add('translate-x-full');
+                backdrop.classList.add('hidden');
+            }
+        }
+
+        // --- SEND CHAT MESSAGES ---
+        async function sendMessage() {
             const input = document.getElementById('message-input');
             const text = input.value.trim();
             if (!text) return;
             
             input.value = '';
             
-            // Instantly render for perceived speed
+            // Perceptual Speed: instantly project bubble in local DOM
             const chatBox = document.getElementById('chat-box');
             const timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            chatBox.innerHTML += `
-                 <div class="flex w-full justify-end">
-                    <div class="max-w-[75%] opacity-70 transition-opacity" id="temp-msg">
-                        <div class="px-4 py-2.5 rounded-2xl bg-blue-600 text-white rounded-br-sm shadow-sm">
-                            <p class="leading-relaxed text-[15px]">${text}</p>
-                        </div>
+            
+            const tempDiv = document.createElement('div');
+            tempDiv.className = 'flex w-full justify-end gap-2.5 items-end';
+            tempDiv.innerHTML = `
+                <div class="max-w-[70%] opacity-60">
+                    <div class="px-4 py-2.5 rounded-2xl bg-blue-600 text-white rounded-br-sm shadow-md">
+                        <p class="leading-relaxed text-[14px] whitespace-pre-wrap break-all">${text}</p>
                     </div>
                 </div>
             `;
+            chatBox.appendChild(tempDiv);
             chatBox.scrollTop = chatBox.scrollHeight;
 
-            // Send to sheet
-            postToSheet({ action: 'sendMessage', sender: myName, message: text });
+            // Dispatch message payload to sheet backend
+            await postToSheet({ action: 'sendMessage', sender: myName, message: text });
             
-            // Clear typing
             isTyping = false;
-            postToSheet({ action: 'setTyping', sender: myName, isTyping: false });
         }
 
         function handleTyping() {
             if (!isTyping) {
                 isTyping = true;
-                postToSheet({ action: 'setTyping', sender: myName, isTyping: true });
             }
             clearTimeout(typingTimeout);
             typingTimeout = setTimeout(() => {
                 isTyping = false;
-                postToSheet({ action: 'setTyping', sender: myName, isTyping: false });
-            }, 2000);
+            }, 2500);
         }
 
-        // --- P2P CALLING (WEBRTC) ---
+        // --- P2P WEBRTC VOICE DIAL SYSTEM ---
         function initPeer() {
-            // Initialize PeerJS. It assigns a random UUID to this client.
+            // Setup WebRTC using free PeerJS signaling cloud
             peer = new Peer(); 
             peer.on('open', id => {
-                console.log('My Peer ID is: ' + id);
+                peerIdString = id;
+                console.log('Connected to P2P network. ID:', id);
+                
+                // Active polling of sheets starts immediately upon channel initialization
+                startPolling();
             });
 
-            // Listen for incoming media streams
             peer.on('call', incomingCall => {
                 navigator.mediaDevices.getUserMedia({ video: false, audio: true }).then(stream => {
                     localStream = stream;
-                    incomingCall.answer(stream); // Answer the call with an A/V stream.
-                    handleCallConnection(incomingCall);
+                    incomingCall.answer(stream);
+                    handleActiveCall(incomingCall);
                 }).catch(err => {
-                    console.error("Failed to get audio", err);
+                    console.error("Audio grab failed:", err);
                     endCall();
                 });
             });
         }
 
-        async function getMediaStream() {
+        async function requestMicrophone() {
             if (localStream) return localStream;
             try {
-                // For simplicity, requesting audio only. Change video: true for video calls.
                 return await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
             } catch (err) {
-                alert("Microphone permission denied.");
+                alert("Microphone permission was denied.");
                 return null;
             }
         }
 
-        async function startCall() {
-            localStream = await getMediaStream();
+        // Click Call Button next to specific member
+        async function dialFriend(friendName, friendPeerId) {
+            localStream = await requestMicrophone();
             if (!localStream) return;
 
+            // Trigger caller display
             document.getElementById('call-overlay').classList.remove('hidden');
-            document.getElementById('call-status').innerText = "Calling...";
+            document.getElementById('call-status').innerText = `Dialing ${friendName}...`;
+            document.getElementById('call-name').innerText = friendName;
+            document.getElementById('call-pfp').src = userDatabase[friendName + "_pfp"] || `https://api.dicebear.com/7.x/avataaars/svg?seed=${friendName}`;
             document.getElementById('accept-call-btn').classList.add('hidden');
 
-            // Send signal to Google Sheets
-            postToSheet({ action: 'initiateCall', sender: myName, peerId: peer.id });
+            activeCallSignal = { target: friendName };
+
+            // Post signaling packet specifically targeting this friend
+            await postToSheet({ action: 'initiateCall', sender: myName, target: friendName, peerId: peer.id });
         }
 
-        function showIncomingCall(callData) {
+        function triggerCallRinging(callData) {
             activeCallSignal = callData;
+            
             const overlay = document.getElementById('call-overlay');
             overlay.classList.remove('hidden');
             overlay.classList.add('active-ring');
+            
             document.getElementById('call-status').innerText = "Incoming Call...";
+            document.getElementById('call-name').innerText = callData.caller;
+            document.getElementById('call-pfp').src = userDatabase[callData.caller + "_pfp"] || `https://api.dicebear.com/7.x/avataaars/svg?seed=${callData.caller}`;
             document.getElementById('accept-call-btn').classList.remove('hidden');
             
-            // Vibrate phone if supported
-            if(navigator.vibrate) navigator.vibrate([500, 500, 500]);
+            if(navigator.vibrate) navigator.vibrate([400, 300, 400]);
         }
 
         async function acceptCall() {
-            if(navigator.vibrate) navigator.vibrate(0); // stop vibrating
-            localStream = await getMediaStream();
+            if(navigator.vibrate) navigator.vibrate(0);
+            localStream = await requestMicrophone();
             if (!localStream || !activeCallSignal) return;
 
-            document.getElementById('call-status').innerText = "Connecting...";
+            document.getElementById('call-status').innerText = "Connecting secure bridge...";
             document.getElementById('accept-call-btn').classList.add('hidden');
 
-            // Dial the peer ID found in the Google Sheet
             const call = peer.call(activeCallSignal.peerId, localStream);
-            handleCallConnection(call);
+            handleActiveCall(call);
         }
 
-        function handleCallConnection(call) {
+        function handleActiveCall(call) {
             currentCall = call;
-            document.getElementById('call-status').innerText = "Connected 0:00";
+            document.getElementById('call-status').innerText = "In call (Connected)";
             
-            // Self destruct the signaling log now that we are connected
-            postToSheet({ action: 'endCall' });
+            // Call is bridged. Remove ring signal from Google Sheets.
+            if(activeCallSignal) {
+                postToSheet({ action: 'endCall', target: activeCallSignal.target || myName });
+            }
 
-            // Stream connected
             call.on('stream', remoteStream => {
                 const remoteVideo = document.getElementById('remote-video');
                 remoteVideo.srcObject = remoteStream;
             });
 
-            call.on('close', hideCallScreen);
-            call.on('error', hideCallScreen);
+            call.on('close', endCallQuietly);
+            call.on('error', endCallQuietly);
         }
 
         function endCall() {
             if(currentCall) currentCall.close();
-            if(localStream) localStream.getTracks().forEach(track => track.stop());
+            if(localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+            
+            // Delete signals
+            if(activeCallSignal) {
+                postToSheet({ action: 'endCall', target: activeCallSignal.target || myName });
+            }
+            
             currentCall = null;
             localStream = null;
-            
-            postToSheet({ action: 'endCall' }); // Wipe signaling data
-            hideCallScreen();
+            endCallQuietly();
         }
 
-        function hideCallScreen() {
+        function endCallQuietly() {
             document.getElementById('call-overlay').classList.add('hidden');
             document.getElementById('call-overlay').classList.remove('active-ring');
             document.getElementById('accept-call-btn').classList.add('hidden');
