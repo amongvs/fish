@@ -113,9 +113,9 @@
 
         <!-- CALL OVERLAY -->
         <div id="call-overlay" class="absolute inset-0 z-[60] bg-slate-900 text-white flex flex-col items-center justify-between py-20 hidden">
-            <!-- Hidden video/audio streams processed via WebRTC -->
-            <video id="local-video" autoplay muted playsinline class="hidden"></video>
-            <video id="remote-video" autoplay playsinline class="hidden"></video>
+            <!-- Hidden audio streams processed via WebRTC (Invisible but active in DOM) -->
+            <audio id="local-audio" autoplay muted playsinline></audio>
+            <audio id="remote-audio" autoplay playsinline></audio>
 
             <div class="flex flex-col items-center mt-10">
                 <div class="w-32 h-32 rounded-full overflow-hidden mb-6 ring-anim relative">
@@ -495,31 +495,54 @@
             });
 
             peer.on('call', incomingCall => {
-                navigator.mediaDevices.getUserMedia({ video: false, audio: true }).then(stream => {
-                    localStream = stream;
-                    incomingCall.answer(stream);
-                    handleActiveCall(incomingCall);
+                // Safely request/reuse microphone stream instead of creating competing browser processes
+                requestMicrophone().then(stream => {
+                    if (stream) {
+                        localStream = stream;
+                        incomingCall.answer(stream);
+                        handleActiveCall(incomingCall);
+                    } else {
+                        console.error("Microphone not available to answer incoming call.");
+                        endCall();
+                    }
                 }).catch(err => {
                     console.error("Audio grab failed:", err);
                     endCall();
                 });
             });
+
+            // Handle WebRTC/PeerJS network connectivity or permission failures cleanly
+            peer.on('error', err => {
+                console.error("PeerJS Client Error:", err);
+                const statusEl = document.getElementById('call-status');
+                if (statusEl) {
+                    statusEl.innerText = `Network issue: ${err.type}`;
+                }
+            });
         }
 
+        // Safeguards browser microphone threads so they do not request competing channels
         async function requestMicrophone() {
             if (localStream) return localStream;
             try {
-                return await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+                const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+                localStream = stream; // Cache globally
+                
+                // Route local microphone stream to muted audio container to keep active
+                const localAudio = document.getElementById('local-audio');
+                if (localAudio) localAudio.srcObject = stream;
+                
+                return localStream;
             } catch (err) {
-                alert("Microphone permission was denied.");
+                alert("Microphone permission was denied. Please allow microphone access to initiate calls.");
                 return null;
             }
         }
 
         // Click Call Button next to specific member
         async function dialFriend(friendName, friendPeerId) {
-            localStream = await requestMicrophone();
-            if (!localStream) return;
+            const stream = await requestMicrophone();
+            if (!stream) return;
 
             // Trigger caller display
             document.getElementById('call-overlay').classList.remove('hidden');
@@ -551,13 +574,13 @@
 
         async function acceptCall() {
             if(navigator.vibrate) navigator.vibrate(0);
-            localStream = await requestMicrophone();
-            if (!localStream || !activeCallSignal) return;
+            const stream = await requestMicrophone();
+            if (!stream || !activeCallSignal) return;
 
             document.getElementById('call-status').innerText = "Connecting secure bridge...";
             document.getElementById('accept-call-btn').classList.add('hidden');
 
-            const call = peer.call(activeCallSignal.peerId, localStream);
+            const call = peer.call(activeCallSignal.peerId, stream);
             handleActiveCall(call);
         }
 
@@ -571,8 +594,11 @@
             }
 
             call.on('stream', remoteStream => {
-                const remoteVideo = document.getElementById('remote-video');
-                remoteVideo.srcObject = remoteStream;
+                const remoteAudio = document.getElementById('remote-audio');
+                if (remoteAudio) {
+                    remoteAudio.srcObject = remoteStream;
+                    remoteAudio.play().catch(e => console.warn("Audio autoplay blocked by browser policy:", e));
+                }
             });
 
             call.on('close', endCallQuietly);
@@ -600,6 +626,13 @@
             document.getElementById('call-overlay').classList.add('hidden');
             document.getElementById('call-overlay').classList.remove('active-ring');
             document.getElementById('accept-call-btn').classList.add('hidden');
+            
+            // Clear stream references
+            const remoteAudio = document.getElementById('remote-audio');
+            const localAudio = document.getElementById('local-audio');
+            if (remoteAudio) remoteAudio.srcObject = null;
+            if (localAudio) localAudio.srcObject = null;
+
             if(navigator.vibrate) navigator.vibrate(0);
         }
     </script>
