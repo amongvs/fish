@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>trash</title>
+    <title>OurChat Group</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Phosphor Icons -->
@@ -264,7 +264,26 @@
             
             messages.forEach(msg => {
                 const isMe = msg.sender === myName;
-                const timeStr = new Date(Number(msg.timestamp)).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                // --- SAFE TIMESTAMP CONVERSION ---
+                let dateObj;
+                let tsRaw = msg.timestamp;
+                if (!tsRaw) {
+                    dateObj = new Date();
+                } else if (typeof tsRaw === 'number') {
+                    dateObj = new Date(tsRaw);
+                } else if (!isNaN(tsRaw)) {
+                    dateObj = new Date(Number(tsRaw));
+                } else {
+                    dateObj = new Date(tsRaw);
+                }
+
+                // If conversion fails entirely, default safely to current time
+                if (isNaN(dateObj.getTime())) {
+                    dateObj = new Date();
+                }
+
+                const timeStr = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 
                 // Pull PFP from user state cache or use dynamic fallback
                 const senderPfp = userDatabase[msg.sender + "_pfp"] || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.sender}`;
@@ -300,7 +319,13 @@
             for (const key in state) {
                 if (key.endsWith("_lastSeen")) {
                     const user = key.replace("_lastSeen", "");
-                    const lastSeenTime = Number(state[key]);
+                    
+                    // Safe parsing for numeric user online timestamps
+                    let lastSeenTime = Number(state[key]);
+                    if (isNaN(lastSeenTime)) {
+                        lastSeenTime = new Date(state[key]).getTime() || 0;
+                    }
+
                     const isOnline = (now - lastSeenTime) < 15000; // Online if polled within 15 seconds
 
                     if (isOnline) {
@@ -570,6 +595,7 @@
             endCallQuietly();
         }
 
+        // Clean termination setup
         function endCallQuietly() {
             document.getElementById('call-overlay').classList.add('hidden');
             document.getElementById('call-overlay').classList.remove('active-ring');
