@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OurChat P2P</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- PeerJS for P2P Calling -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+    <style>
+        /* Custom scrollbar and animations */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; }
+        .glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .ring-anim { animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
+        @keyframes pulse-ring { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(34, 197, 94, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
+        .typing-dot { animation: typing 1.4s infinite ease-in-out both; }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+    </style>
+</head>
+<body class="h-screen w-full overflow-hidden flex justify-center bg-slate-100 text-slate-800">
+
+    <!-- Config (REPLACE THIS URL) -->
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx066mA2jLGV2SQ2MpRnQyuihfefo-qshwQIMmUhfnQpxruPAuipHZk2PYWx5DegAFvug/exec"; 
+    </script>
+
+    <!-- App Container -->
+    <div class="w-full max-w-md h-full bg-white relative flex flex-col shadow-2xl">
+
+        <!-- SETUP SCREEN -->
+        <div id="setup-screen" class="absolute inset-0 z-50 bg-white flex flex-col items-center justify-center p-6 transition-opacity duration-300">
+            <div class="w-24 h-24 bg-slate-200 rounded-full mb-6 relative overflow-hidden shadow-md border-4 border-white group cursor-pointer" onclick="document.getElementById('pfp-input').click()">
+                <img id="pfp-preview" src="https://api.dicebear.com/7.x/avataaars/svg?seed=placeholder" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <i class="ph ph-camera text-white text-2xl"></i>
+                </div>
+            </div>
+            <input type="file" id="pfp-input" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+            
+            <h1 class="text-2xl font-bold mb-2">Set Up Profile</h1>
+            <p class="text-slate-500 text-sm mb-8 text-center">Your image will be compressed automatically to fit in the database.</p>
+            
+            <input type="text" id="username-input" placeholder="Enter your name" class="w-full bg-slate-100 px-5 py-4 rounded-xl mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium">
+            <button onclick="saveProfile()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-700 transition active:scale-95">Enter Chat</button>
+        </div>
+
+        <!-- MAIN CHAT SCREEN -->
+        <div id="chat-screen" class="flex flex-col h-full hidden">
+            <!-- Header -->
+            <header class="glass z-10 px-4 py-3 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <img id="friend-pfp" src="https://api.dicebear.com/7.x/avataaars/svg?seed=friend" class="w-10 h-10 rounded-full border border-slate-200 object-cover">
+                    <div>
+                        <h2 id="friend-name" class="font-bold text-lg leading-tight">Waiting for friend...</h2>
+                        <div class="flex items-center gap-1 text-xs text-green-500 font-medium hidden" id="typing-indicator">
+                            <span>typing</span>
+                            <div class="flex gap-0.5"><div class="w-1 h-1 bg-green-500 rounded-full typing-dot"></div><div class="w-1 h-1 bg-green-500 rounded-full typing-dot"></div><div class="w-1 h-1 bg-green-500 rounded-full typing-dot"></div></div>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="startCall()" class="w-10 h-10 rounded-full bg-slate-100 text-blue-600 flex items-center justify-center hover:bg-blue-50 transition active:scale-90">
+                    <i class="ph-fill ph-phone text-xl"></i>
+                </button>
+            </header>
+
+            <!-- Chat Area -->
+            <main id="chat-box" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 flex flex-col">
+                <!-- Messages injected here -->
+            </main>
+
+            <!-- Input Area -->
+            <footer class="p-3 bg-white border-t border-slate-100 pb-safe">
+                <div class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-full">
+                    <input type="text" id="message-input" placeholder="Message..." class="flex-1 bg-transparent px-4 py-2 outline-none" oninput="handleTyping()" onkeypress="if(event.key === 'Enter') sendMessage()">
+                    <button onclick="sendMessage()" class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-sm hover:bg-blue-700 transition active:scale-90">
+                        <i class="ph-fill ph-paper-plane-tilt text-lg"></i>
+                    </button>
+                </div>
+            </footer>
+        </div>
+
+        <!-- CALL OVERLAY -->
+        <div id="call-overlay" class="absolute inset-0 z-[60] bg-slate-900 text-white flex flex-col items-center justify-between py-20 hidden">
+            <!-- Hidden video elements to process WebRTC streams -->
+            <video id="local-video" autoplay muted playsinline class="hidden"></video>
+            <video id="remote-video" autoplay playsinline class="hidden"></video>
+
+            <div class="flex flex-col items-center mt-10">
+                <div class="w-32 h-32 rounded-full overflow-hidden mb-6 ring-anim relative">
+                    <img id="call-pfp" src="https://api.dicebear.com/7.x/avataaars/svg?seed=friend" class="w-full h-full object-cover">
+                </div>
+                <h2 id="call-name" class="text-3xl font-bold mb-2">Friend Name</h2>
+                <p id="call-status" class="text-slate-400">Ringing...</p>
+            </div>
+
+            <div class="flex gap-8 mb-10">
+                <button id="accept-call-btn" onclick="acceptCall()" class="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center shadow-lg hidden active:scale-95 transition">
+                    <i class="ph-fill ph-phone text-3xl"></i>
+                </button>
+                <button onclick="endCall()" class="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center shadow-lg active:scale-95 transition">
+                    <i class="ph-fill ph-phone-disconnect text-3xl"></i>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- STATE VARIABLES ---
+        let myName = localStorage.getItem('chat_name') || '';
+        let myPfp = localStorage.getItem('chat_pfp') || '';
+        let peer = null;
+        let localStream = null;
+        let currentCall = null;
+        let isTyping = false;
+        let typingTimeout;
+        let lastMessageCount = 0;
+        let pollInterval;
+        let activeCallSignal = null;
+
+        // --- INITIALIZATION ---
+        window.onload = () => {
+            if (myName) {
+                document.getElementById('username-input').value = myName;
+                if(myPfp) document.getElementById('pfp-preview').src = myPfp;
+            }
+        };
+
+        // --- IMAGE COMPRESSION ---
+        // Downscales image to ~100px and converts to low-quality JPEG to keep base64 string small for Google Sheets
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = 100; // Force tiny width
+                    canvas.height = 100; // Force tiny height
+                    // Crop center
+                    const minSize = Math.min(img.width, img.height);
+                    const sx = (img.width - minSize) / 2;
+                    const sy = (img.height - minSize) / 2;
+                    ctx.drawImage(img, sx, sy, minSize, minSize, 0, 0, 100, 100);
+                    
+                    // Compress to JPEG format (0.6 quality)
+                    myPfp = canvas.toDataURL('image/jpeg', 0.6); 
+                    document.getElementById('pfp-preview').src = myPfp;
+                }
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+
+        // --- PROFILE SETUP ---
+        async function saveProfile() {
+            myName = document.getElementById('username-input').value.trim();
+            if (!myName) return alert("Please enter a name");
+            
+            // Generate default if no PFP
+            if (!myPfp) {
+                myPfp = `https://api.dicebear.com/7.x/avataaars/svg?seed=${myName}`;
+            }
+
+            localStorage.setItem('chat_name', myName);
+            localStorage.setItem('chat_pfp', myPfp);
+
+            document.getElementById('setup-screen').classList.add('opacity-0');
+            setTimeout(() => {
+                document.getElementById('setup-screen').classList.add('hidden');
+                document.getElementById('chat-screen').classList.remove('hidden');
+            }, 300);
+
+            // Push profile to database
+            postToSheet({ action: 'updateUser', sender: myName, pfp: myPfp });
+            
+            initPeer();
+            startPolling();
+        }
+
+        // --- NETWORK FETCHING (POLLING) ---
+        function startPolling() {
+            pollData(); // initial fetch
+            // Poll every 3 seconds to keep it pseudo-realtime
+            pollInterval = setInterval(pollData, 3000); 
+        }
+
+        async function pollData() {
+            if(!SCRIPT_URL.startsWith('http')) return; // Ignore if URL not set
+            try {
+                const response = await fetch(SCRIPT_URL);
+                const data = await response.json();
+                
+                renderMessages(data.messages);
+                processState(data.state);
+            } catch (err) {
+                console.error("Polling error", err);
+            }
+        }
+
+        async function postToSheet(payload) {
+            if(!SCRIPT_URL.startsWith('http')) return console.warn("Google Script URL missing");
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+            } catch (err) {
+                console.error("Post error", err);
+            }
+        }
+
+        // --- RENDERING UI ---
+        function renderMessages(messages) {
+            if (messages.length === lastMessageCount) return; // No new messages
+            lastMessageCount = messages.length;
+            
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML = ''; // Clear and rebuild
+            
+            messages.forEach(msg => {
+                const isMe = msg.sender === myName;
+                const timeStr = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                const div = document.createElement('div');
+                div.className = `flex w-full ${isMe ? 'justify-end' : 'justify-start'}`;
+                
+                div.innerHTML = `
+                    <div class="max-w-[75%]">
+                        ${!isMe ? `<span class="text-[10px] text-slate-400 ml-1 mb-1 block">${msg.sender}</span>` : ''}
+                        <div class="px-4 py-2.5 rounded-2xl ${isMe ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-white border border-slate-200 text-slate-800 rounded-bl-sm'} shadow-sm">
+                            <p class="leading-relaxed text-[15px]">${msg.message}</p>
+                        </div>
+                        <span class="text-[10px] text-slate-400 mt-1 block ${isMe ? 'text-right mr-1' : 'ml-1'}">${timeStr}</span>
+                    </div>
+                `;
+                chatBox.appendChild(div);
+            });
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function processState(state) {
+            // Find friend (whoever is not me)
+            let friendName = "Friend";
+            let friendPfp = "https://api.dicebear.com/7.x/avataaars/svg?seed=friend";
+            let isFriendTyping = false;
+
+            for (const key in state) {
+                if (key.endsWith("_pfp") && key !== `${myName}_pfp`) {
+                    friendName = key.replace("_pfp", "");
+                    friendPfp = state[key];
+                }
+                if (key === `${friendName}_typing` && state[key] === "true") {
+                    isFriendTyping = true;
+                }
+            }
+
+            // Update UI with friend data
+            if(friendName !== "Friend") {
+                document.getElementById('friend-name').innerText = friendName;
+                document.getElementById('friend-pfp').src = friendPfp;
+                document.getElementById('call-name').innerText = friendName;
+                document.getElementById('call-pfp').src = friendPfp;
+            }
+
+            // Update typing indicator
+            const typeInd = document.getElementById('typing-indicator');
+            isFriendTyping ? typeInd.classList.remove('hidden') : typeInd.classList.add('hidden');
+
+            // Process Call Signals
+            const callSignalRaw = state['active_call'];
+            if (callSignalRaw) {
+                const callData = JSON.parse(callSignalRaw);
+                const timeDiff = new Date().getTime() - callData.time;
+                
+                // If there's a call signal, it's for me, and it's less than 60 seconds old
+                if (callData.caller !== myName && timeDiff < 60000) {
+                    if (!currentCall && !document.getElementById('call-overlay').classList.contains('active-ring')) {
+                        showIncomingCall(callData);
+                    }
+                }
+            } else {
+                // Call was cancelled or ended by the other person
+                if (document.getElementById('call-overlay').classList.contains('active-ring') && !currentCall) {
+                    hideCallScreen();
+                }
+            }
+        }
+
+        // --- MESSAGING ---
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if (!text) return;
+            
+            input.value = '';
+            
+            // Instantly render for perceived speed
+            const chatBox = document.getElementById('chat-box');
+            const timeStr = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            chatBox.innerHTML += `
+                 <div class="flex w-full justify-end">
+                    <div class="max-w-[75%] opacity-70 transition-opacity" id="temp-msg">
+                        <div class="px-4 py-2.5 rounded-2xl bg-blue-600 text-white rounded-br-sm shadow-sm">
+                            <p class="leading-relaxed text-[15px]">${text}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // Send to sheet
+            postToSheet({ action: 'sendMessage', sender: myName, message: text });
+            
+            // Clear typing
+            isTyping = false;
+            postToSheet({ action: 'setTyping', sender: myName, isTyping: false });
+        }
+
+        function handleTyping() {
+            if (!isTyping) {
+                isTyping = true;
+                postToSheet({ action: 'setTyping', sender: myName, isTyping: true });
+            }
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                isTyping = false;
+                postToSheet({ action: 'setTyping', sender: myName, isTyping: false });
+            }, 2000);
+        }
+
+        // --- P2P CALLING (WEBRTC) ---
+        function initPeer() {
+            // Initialize PeerJS. It assigns a random UUID to this client.
+            peer = new Peer(); 
+            peer.on('open', id => {
+                console.log('My Peer ID is: ' + id);
+            });
+
+            // Listen for incoming media streams
+            peer.on('call', incomingCall => {
+                navigator.mediaDevices.getUserMedia({ video: false, audio: true }).then(stream => {
+                    localStream = stream;
+                    incomingCall.answer(stream); // Answer the call with an A/V stream.
+                    handleCallConnection(incomingCall);
+                }).catch(err => {
+                    console.error("Failed to get audio", err);
+                    endCall();
+                });
+            });
+        }
+
+        async function getMediaStream() {
+            if (localStream) return localStream;
+            try {
+                // For simplicity, requesting audio only. Change video: true for video calls.
+                return await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+            } catch (err) {
+                alert("Microphone permission denied.");
+                return null;
+            }
+        }
+
+        async function startCall() {
+            localStream = await getMediaStream();
+            if (!localStream) return;
+
+            document.getElementById('call-overlay').classList.remove('hidden');
+            document.getElementById('call-status').innerText = "Calling...";
+            document.getElementById('accept-call-btn').classList.add('hidden');
+
+            // Send signal to Google Sheets
+            postToSheet({ action: 'initiateCall', sender: myName, peerId: peer.id });
+        }
+
+        function showIncomingCall(callData) {
+            activeCallSignal = callData;
+            const overlay = document.getElementById('call-overlay');
+            overlay.classList.remove('hidden');
+            overlay.classList.add('active-ring');
+            document.getElementById('call-status').innerText = "Incoming Call...";
+            document.getElementById('accept-call-btn').classList.remove('hidden');
+            
+            // Vibrate phone if supported
+            if(navigator.vibrate) navigator.vibrate([500, 500, 500]);
+        }
+
+        async function acceptCall() {
+            if(navigator.vibrate) navigator.vibrate(0); // stop vibrating
+            localStream = await getMediaStream();
+            if (!localStream || !activeCallSignal) return;
+
+            document.getElementById('call-status').innerText = "Connecting...";
+            document.getElementById('accept-call-btn').classList.add('hidden');
+
+            // Dial the peer ID found in the Google Sheet
+            const call = peer.call(activeCallSignal.peerId, localStream);
+            handleCallConnection(call);
+        }
+
+        function handleCallConnection(call) {
+            currentCall = call;
+            document.getElementById('call-status').innerText = "Connected 0:00";
+            
+            // Self destruct the signaling log now that we are connected
+            postToSheet({ action: 'endCall' });
+
+            // Stream connected
+            call.on('stream', remoteStream => {
+                const remoteVideo = document.getElementById('remote-video');
+                remoteVideo.srcObject = remoteStream;
+            });
+
+            call.on('close', hideCallScreen);
+            call.on('error', hideCallScreen);
+        }
+
+        function endCall() {
+            if(currentCall) currentCall.close();
+            if(localStream) localStream.getTracks().forEach(track => track.stop());
+            currentCall = null;
+            localStream = null;
+            
+            postToSheet({ action: 'endCall' }); // Wipe signaling data
+            hideCallScreen();
+        }
+
+        function hideCallScreen() {
+            document.getElementById('call-overlay').classList.add('hidden');
+            document.getElementById('call-overlay').classList.remove('active-ring');
+            document.getElementById('accept-call-btn').classList.add('hidden');
+            if(navigator.vibrate) navigator.vibrate(0);
+        }
+    </script>
+</body>
+</html>
